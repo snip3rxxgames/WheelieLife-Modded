@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Fullscreen Embed — example.com</title>
+  <title>Wheelie Life</title>
   <style>
     /* Reset-ish */
     :root{
@@ -184,10 +184,10 @@
 <body>
   <div class="toolbar" role="toolbar" aria-label="Embed controls">
     <div class="brand">
-      <div class="logo">E</div>
+      <div class="logo">WL</div>
       <div>
-        <div class="title">Fullscreen Embed</div>
-        <div class="subtitle">embedding example.com — toolbar controls & shortcuts</div>
+        <div class="title">Wheelie Life</div>
+        <div class="subtitle">Toolbar controls & shortcuts</div>
       </div>
     </div>
 
@@ -197,7 +197,6 @@
       <button class="btn small" id="zoomOut" title="Zoom out (-)">Zoom -</button>
       <button class="btn small" id="fitBtn" title="Reset zoom (0)">Reset</button>
       <button class="btn" id="fsBtn" title="Enter fullscreen (F)">Enter Fullscreen</button>
-      <button class="btn" id="openBtn" title="Open in new tab">Open in new tab</button>
     </div>
   </div>
 
@@ -280,8 +279,8 @@
       }
 
       // Open the target in a new tab (fallback when framing blocked)
-      function openNewTab(){
-        window.open(TARGET, '_blank', 'noopener');
+     // function openNewTab(){
+     //   window.open(TARGET, '_blank', 'noopener');
       }
 
       // Fullscreen toggling using browser APIs
