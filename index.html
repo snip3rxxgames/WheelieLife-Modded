@@ -18,7 +18,7 @@
 </head>
 <body>
   <header>
-    <div>Remote HTML Loader</div>
+    <div>Remote Loader</div>
     <div id="status">Preparing...</div>
     <div class="controls">
       <button id="reloadBtn">Reload</button>
@@ -114,7 +114,7 @@
       // current sandbox allows scripts + same-origin; remove 'allow-same-origin' for stronger isolation.
       iframe.src = blobUrl;
 
-      setStatus('Loaded remote page. Running inside iframe.');
+      setStatus('Loaded remote script.');
     } catch (err) {
       console.error(err);
       setStatus('Failed to load remote HTML — see console for details.');
