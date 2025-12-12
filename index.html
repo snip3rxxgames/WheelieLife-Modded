@@ -1,29 +1,139 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Wheelie life</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wheelie Life</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; height: 100vh; display:flex; flex-direction:column; }
+    header { padding:12px 16px; background:#111; color:#fff; display:flex; align-items:center; gap:12px; }
+    main { flex:1; display:flex; }
+    #frame { flex:1; border:0; width:100%; height:100%; background:#000; }
+    #status { padding:8px 12px; color:#eee; font-size:14px; }
+    .warning { color: #ffcc00; font-weight:700; margin-left: 8px; }
+    .controls { margin-left:auto; display:flex; gap:8px; align-items:center; }
+    button { background:#222; color:#fff; border:1px solid #333; padding:6px 10px; border-radius:6px; cursor:pointer; }
+    button:hover { filter:brightness(1.15); }
+  </style>
 </head>
 <body>
-    <script>
-        // Replace with your raw GitHub link
-        const rawGitHubUrl = 'raw.githubusercontent.com/snip3rxxgames/WheelieLife-Modded/refs/heads/main/Modded%20WheelieLife.html'; 
-        
-        fetch(rawGitHubUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
-                return response.text(); // Get the response as plain text
-            })
-            .then(data => {
-                // Display the fetched content in the <pre> tag
-                document.getElementById('content-area').textContent = data;
-            })
-            .catch(error => {
-                console.error('There has been a problem with your fetch operation:', error);
-                document.getElementById('content-area').textContent = 'Error loading content: ' + error.message;
-            });
-    </script>
+  <header>
+    <div>Remote HTML Loader</div>
+    <div id="status">Preparing...</div>
+    <div class="controls">
+      <button id="reloadBtn">Reload</button>
+    </div>
+  </header>
+
+  <main>
+    <iframe id="frame" sandbox="allow-scripts allow-forms allow-same-origin allow-modals"></iframe>
+  </main>
+
+<script>
+(() => {
+  // user-supplied path (from your message). I added https:// if missing.
+  const rawPath = "raw.githubusercontent.com/snip3rxxgames/WheelieLife-Modded/refs/heads/main/Modded%20WheelieLife.html";
+  const ensureProto = (u) => (u.startsWith('http://') || u.startsWith('https://')) ? u : 'https://' + u;
+
+  // two candidate raw URLs:
+  const candidateUrls = [
+    ensureProto(rawPath),
+    // fallback to common raw.githubusercontent.com pattern: replace '/refs/heads/' -> '/'
+    ensureProto(rawPath.replace('/refs/heads/', '/'))
+  ].filter((v, i, arr) => arr.indexOf(v) === i); // unique
+
+  const statusEl = document.getElementById('status');
+  const iframe = document.getElementById('frame');
+  const reloadBtn = document.getElementById('reloadBtn');
+
+  reloadBtn.addEventListener('click', () => loadRemote());
+
+  function setStatus(txt, type) {
+    statusEl.textContent = txt;
+    statusEl.className = type ? type : '';
+  }
+
+  // Insert a <base> tag so relative links in the remote HTML resolve to the raw file location
+  function injectBase(html, baseHref) {
+    const baseTag = '<base href="' + baseHref.replace(/"/g,'&quot;') + '">';
+    const headRegex = /<head([^>]*)>/i;
+    if (headRegex.test(html)) {
+      return html.replace(headRegex, (m) => m + baseTag);
+    } else {
+      // no head: create one and insert base at top
+      return '<head>' + baseTag + '</head>' + html;
+    }
+  }
+
+  async function fetchText(url) {
+    const resp = await fetch(url, { cache: 'no-store' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status + ' for ' + url);
+    return await resp.text();
+  }
+
+  async function tryCandidates(urls) {
+    let lastErr = null;
+    for (const url of urls) {
+      try {
+        setStatus('Fetching: ' + url);
+        const text = await fetchText(url);
+        setStatus('Fetched OK: ' + url);
+        return { url, text };
+      } catch (e) {
+        lastErr = e;
+        console.warn('Failed to fetch', url, e);
+      }
+    }
+    throw lastErr || new Error('No URLs to try');
+  }
+
+  async function loadRemote() {
+    setStatus('Starting fetch...');
+    try {
+      const result = await tryCandidates(candidateUrls);
+      const url = result.url;
+      const html = result.text;
+
+      // compute base href (directory of the remote file)
+      const baseHref = url.replace(/[#?].*$/,'').replace(/\/[^\/]*$/, '/') || url;
+
+      // inject base tag so relative resources (images, scripts, styles) resolve correctly
+      const htmlWithBase = injectBase(html, baseHref);
+
+      // create a blob so the fetched HTML executes as a document in the iframe
+      const blob = new Blob([htmlWithBase], { type: 'text/html' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // revoke any previous blob URL
+      if (iframe._currentBlobUrl) {
+        try { URL.revokeObjectURL(iframe._currentBlobUrl); } catch(e){/*ignore*/ }
+      }
+      iframe._currentBlobUrl = blobUrl;
+
+      // set sandbox attribute depending on how much freedom you want.
+      // current sandbox allows scripts + same-origin; remove 'allow-same-origin' for stronger isolation.
+      iframe.src = blobUrl;
+
+      setStatus('Loaded remote page. Running inside iframe.');
+    } catch (err) {
+      console.error(err);
+      setStatus('Failed to load remote HTML — see console for details.');
+      // show a visible warning in header
+      const warn = document.createElement('span');
+      warn.textContent = ' WARNING: failed to fetch remote file';
+      warn.className = 'warning';
+      if (!document.querySelector('.warning')) {
+        statusEl.parentNode.insertBefore(warn, statusEl.nextSibling);
+      }
+    }
+  }
+
+  // do it once on load
+  loadRemote();
+
+  // convenience: reload on double-click header
+  document.querySelector('header').addEventListener('dblclick', loadRemote);
+})();
+</script>
 </body>
 </html>
